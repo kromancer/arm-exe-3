@@ -1,0 +1,14 @@
+- input: input-0.npy
+  output: output-0.npy
+  reference: reference-0.npy
+
+- input: input-1.npy
+  output: output-1.npy
+  reference: reference-1.npy
+
+- input: input-2.npy
+  output: output-2.npy
+  reference: reference-2.npy
+
+- input: input-3.npy
+  output: output-3.npy
