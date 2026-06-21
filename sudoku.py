@@ -12,6 +12,32 @@ class Sudoku(object):
     def __str__(self):
         pass
 
+    def is_solved(self) -> bool:
+        return self.check_rows() and self.check_cols() and self.check_boxes()
+
+    def check_rows(self) -> bool:
+        all_numbers = set(range(1, 10))
+        for row in self.grid:
+            if len(all_numbers - set(row)) != 0:
+                return False
+        return True
+
+    def check_cols(self) -> bool:
+        all_numbers = set(range(1, 10))
+        for col in self.grid.T:
+            if len(all_numbers - set(col)) != 0:
+                return False
+        return True
+
+    def check_boxes(self) -> bool:
+        all_numbers = set(range(1, 10))
+        boxes = self.grid.reshape(3, 3, 3, 3).swapaxes(1, 2)
+        for i in range(3):
+            for j in range(3):
+                if len(all_numbers - set(boxes[i, j, :, :].flatten())) != 0:
+                    return False
+        return True
+
     def solve(self):
         pass
 
