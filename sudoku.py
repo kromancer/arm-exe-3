@@ -16,8 +16,17 @@ class Sudoku(object):
 
         self.cell_candidates: list[list[set]] = [ [ set() for _ in range(9) ] for _ in range(9) ]
 
-    def __str__(self):
-        pass
+    def __str__(self) -> str:
+        s = ""
+        for row in range(9):
+            if row % 3 == 0 and row != 0:
+                s += "-----------------------\n"
+            for col in range(9):
+                if col % 3 == 0 and col != 0:
+                    s += " | "
+                s += str(self.grid[row, col]) + " "
+            s += "\n"
+        return s
 
     def is_solved(self) -> bool:
         return self.check_rows() and self.check_cols() and self.check_boxes()
@@ -97,9 +106,17 @@ class Sudoku(object):
                     return True
         return False
 
-def run_sudoku(grid: np.ndarray) -> np.ndarray:
+def run_sudoku(grid: np.ndarray, is_verbose: bool) -> np.ndarray:
     sudoku = Sudoku(grid)
+
+    if is_verbose:
+        print(sudoku)
+
     sudoku.solve()
+
+    if is_verbose:
+        print(sudoku)
+
     return sudoku.grid
 
 def compare(source, reference):
@@ -113,13 +130,17 @@ def compare(source, reference):
 if __name__ == "__main__":
     parser = ArgumentParser(description="Solve Sudokus, store their solution and if a reference is provided, compare against it")
     parser.add_argument("test_spec", help="A yaml containing a list of dicts for the input/output/reference .npy files")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print sudoku before/after solution")
     args = parser.parse_args()
 
     with open(args.test_spec) as f:
         test_spec = yaml.safe_load(f)
 
     for tc in test_spec:
-        out = run_sudoku(np.load(tc["input"]))
+        if args.verbose:
+            print(f"Solving {tc['input']}")
+
+        out = run_sudoku(np.load(tc["input"]), args.verbose)
 
         if "reference" in tc and not compare(out, np.load(tc["reference"])):
             print(f"Solution does not match reference for: {tc['input']}")
