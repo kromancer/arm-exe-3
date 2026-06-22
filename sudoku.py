@@ -83,13 +83,32 @@ class Sudoku(object):
                     return False
         return True
 
-    def solve(self):
+    def _solve(self):
         while not self.is_solved():
-            self.propagate_constraints()
+            if not self.propagate_constraints():
+                # not solvable grid
+                return None
 
             if not self.assign():
-                print("No position with a single candidate, giving-up")
-                break
+                # there is no cell with a single assignment candidate,
+                # we should make a guess
+                min_row, min_col = self.find_cell_with_min_candidates()
+                while len(self.cell_candidates[min_row][min_col]) > 0:
+                    candidate = self.cell_candidates[min_row][min_col].pop()
+                    new_grid = self.grid.copy()
+                    new_grid[min_row, min_col] = candidate
+                    solved_or_not = Sudoku(new_grid)._solve()
+                    if solved_or_not is not None:
+                        return solved_or_not
+                return None
+
+        return self
+
+
+    def solve(self):
+        solved = self._solve()
+        if solved is not None:
+            self.grid = solved.grid
 
     def propagate_constraints(self) -> bool:
         """
@@ -120,6 +139,7 @@ class Sudoku(object):
                 self.cell_candidates[row][col] = (self.row_candidates[row] &
                                                   self.col_candidates[col] &
                                                   self.box_candidates[row // 3][col // 3])
+
                 if len(self.cell_candidates[row][col]) == 0 and self.grid[row, col] == 0:
                     # no candidates left for this cell, and it's not already filled!
                     return False
@@ -134,6 +154,17 @@ class Sudoku(object):
                     self.grid[row, col] = self.cell_candidates[row][col].pop()
                     return True
         return False
+
+    def find_cell_with_min_candidates(self) -> tuple[int, int]:
+        min_candidates = 9
+        min_cell = None
+        for row in range(9):
+            for col in range(9):
+                if 0 < len(self.cell_candidates[row][col]) <= min_candidates:
+                    min_candidates = len(self.cell_candidates[row][col])
+                    min_cell = (row, col)
+        assert min_cell is not None
+        return min_cell
 
 def run_sudoku(grid: np.ndarray, is_verbose: bool) -> np.ndarray:
     sudoku = Sudoku(grid)
