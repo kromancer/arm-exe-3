@@ -37,6 +37,35 @@ class TestSudoku(unittest.TestCase):
         not_solved[0, 0] = 10
         self.assertFalse(Sudoku(not_solved).is_solved())
 
+    def test_propagate_assign(self):
+        """
+        Check that the propagation of constraints works correctly,
+        and that we can solve trivial sudokus with just propagation + assignment
+        """
+        solved = np.load("reference-0.npy")
+
+        def check_solve(grid):
+            sudoku = Sudoku(grid)
+            self.assertFalse(sudoku.is_solved())
+            sudoku.solve()
+            self.assertTrue(sudoku.is_solved())
+
+        # remove an assignment from each row and check that the sudoku can be solved
+        not_solved = solved.copy()
+        not_solved[:, 0] = 0
+        check_solve(not_solved)
+
+        # remove an assignment from each column and check that the sudoku can be solved
+        not_solved = solved.copy()
+        not_solved[8, :] = 0
+        check_solve(not_solved)
+
+        # remove an assignment from each box and check that the sudoku can be solved
+        not_solved = solved.copy()
+        not_solved.reshape(3, 3, 3, 3).swapaxes(1, 2)[:, :, 0, 0] = 0
+        check_solve(not_solved)
+
+
 
 if __name__ == "__main__":
     unittest.main()
