@@ -11,31 +11,14 @@ class TestSudoku(unittest.TestCase):
         solved = np.load("reference-0.npy")
         self.assertTrue(Sudoku(solved).is_solved())
 
-        # mess up the first row
+        # mess up the first row/column/box
         not_solved = solved.copy()
-        not_solved[0, 0] = not_solved[0, 1]
+        not_solved[0, 0] = 0
         s = Sudoku(not_solved)
         self.assertFalse(s.is_solved())
         self.assertFalse(s.check_rows())
-
-        # mess up the first column
-        not_solved = solved.copy()
-        not_solved[0, 0] = not_solved[1, 0]
-        s = Sudoku(not_solved)
-        self.assertFalse(s.is_solved())
         self.assertFalse(s.check_cols())
-
-        # mess up the last box
-        not_solved = solved.copy()
-        not_solved[8, 8] = not_solved[6, 6]
-        s = Sudoku(not_solved)
-        self.assertFalse(s.is_solved())
         self.assertFalse(s.check_boxes())
-
-        # any value not in the range 1-9 should be ignored
-        not_solved = solved.copy()
-        not_solved[0, 0] = 10
-        self.assertFalse(Sudoku(not_solved).is_solved())
 
     def test_propagate_assign(self):
         """
@@ -65,6 +48,10 @@ class TestSudoku(unittest.TestCase):
         not_solved.reshape(3, 3, 3, 3).swapaxes(1, 2)[:, :, 0, 0] = 0
         check_solve(not_solved)
 
+    def test_validate_input_grid(self):
+        invalid = np.load("input-3.npy")
+        with self.assertRaises(ValueError):
+            _ = Sudoku(invalid)
 
 
 if __name__ == "__main__":

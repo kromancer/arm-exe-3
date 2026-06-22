@@ -8,6 +8,8 @@ import yaml
 class Sudoku(object):
     def __init__(self, grid: np.ndarray):
         self.grid = grid
+        self.validate_input_grid()
+
         self.row_candidates: list[set] = [ {x for x in range(1, 10)} for _ in range(9) ]
         self.col_candidates: list[set] = [ {x for x in range(1, 10)} for _ in range(9) ]
 
@@ -15,6 +17,33 @@ class Sudoku(object):
         self.box_candidates: list[list[set]] = [ [ {x for x in range(1, 10)} for _ in range(3) ] for _ in range(3) ]
 
         self.cell_candidates: list[list[set]] = [ [ set() for _ in range(9) ] for _ in range(9) ]
+
+    def validate_input_grid(self) -> None:
+        if self.grid.shape != (9, 9):
+            raise ValueError("Input grid must be 9x9")
+
+        if not (self.grid >= 0).all() or not (self.grid <= 9).all():
+            raise ValueError("Input grid must contain only numbers 0-9")
+
+        # no duplicates per box
+        boxes = self.grid.reshape(3, 3, 3, 3).swapaxes(1, 2)
+        for i in range(3):
+            for j in range(3):
+                box_no_zeroes = boxes[i, j, :, :][boxes[i, j, :, :] != 0]
+                if len(box_no_zeroes) != len(set(box_no_zeroes)):
+                    raise ValueError(f"Duplicate numbers in box {i, j}")
+
+        # no duplicates per column
+        for col in range(9):
+            col_no_zeros = self.grid[:, col][self.grid[:, col] != 0]
+            if len(col_no_zeros) != len(set(col_no_zeros)):
+                raise ValueError(f"Duplicate numbers in column {col}")
+
+        # no duplicates per row
+        for row in range(9):
+            row_no_zeros = self.grid[row, :][self.grid[row, :] != 0]
+            if len(row_no_zeros) != len(set(row_no_zeros)):
+                raise ValueError(f"Duplicate numbers in row {row}")
 
     def __str__(self) -> str:
         s = ""
@@ -140,10 +169,11 @@ if __name__ == "__main__":
         if args.verbose:
             print(f"Solving {tc['input']}")
 
-        out = run_sudoku(np.load(tc["input"]), args.verbose)
-
-        if "reference" in tc and not compare(out, np.load(tc["reference"])):
-            print(f"Solution does not match reference for: {tc['input']}")
-
-        np.save(tc["output"], out)
-
+        try:
+            out = run_sudoku(np.load(tc["input"]), args.verbose)
+            if "reference" in tc and not compare(out, np.load(tc["reference"])):
+                print(f"Solution does not match reference for: {tc['input']}")
+            np.save(tc["output"], out)
+        except ValueError as e:
+            print(f"Input grid validation failed for: {tc['input']}")
+            print(e)
