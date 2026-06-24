@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 from argparse import ArgumentParser
 
 import numpy as np
@@ -10,12 +11,15 @@ class Sudoku(object):
         self.grid = grid
         self.validate_input_grid()
 
+        # For each row/column/box track a set of digits that are still available.
         self.row_candidates: list[set] = [ {x for x in range(1, 10)} for _ in range(9) ]
         self.col_candidates: list[set] = [ {x for x in range(1, 10)} for _ in range(9) ]
 
-        # view boxes as a 3x3 grid
+        # View boxes as a 3x3 grid
         self.box_candidates: list[list[set]] = [ [ {x for x in range(1, 10)} for _ in range(3) ] for _ in range(3) ]
 
+        # Candidate digits per cell, recomputed on each propagation pass
+        # as the intersection of its corresponding row/column/box candidate sets.
         self.cell_candidates: list[list[set]] = [ [ set() for _ in range(9) ] for _ in range(9) ]
 
     def validate_input_grid(self) -> None:
@@ -25,7 +29,7 @@ class Sudoku(object):
         if not (self.grid >= 0).all() or not (self.grid <= 9).all():
             raise ValueError("Input grid must contain only numbers 0-9")
 
-        # no duplicates per box
+        # no duplicates per box.
         boxes = self.grid.reshape(3, 3, 3, 3).swapaxes(1, 2)
         for i in range(3):
             for j in range(3):
@@ -83,7 +87,7 @@ class Sudoku(object):
                     return False
         return True
 
-    def _solve(self):
+    def _solve(self) -> Sudoku | None:
         while not self.is_solved():
             if not self.propagate_constraints():
                 # not solvable grid
@@ -91,15 +95,19 @@ class Sudoku(object):
 
             if not self.assign():
                 # there is no cell with a single assignment candidate,
-                # we should make a guess
+                # we should make a guess: pick the cell with the fewest candidates
                 min_row, min_col = self.find_cell_with_min_candidates()
                 while len(self.cell_candidates[min_row][min_col]) > 0:
                     candidate = self.cell_candidates[min_row][min_col].pop()
+
+                    # copy grid to avoid modifying the original and having to rollback
                     new_grid = self.grid.copy()
                     new_grid[min_row, min_col] = candidate
                     solved_or_not = Sudoku(new_grid)._solve()
+
                     if solved_or_not is not None:
                         return solved_or_not
+                # every candidate for this cell failed -> backtrack to the previous guess
                 return None
 
         return self
@@ -116,7 +124,7 @@ class Sudoku(object):
         - update the row, column, and box candidates
         - each cell's candidates is then just the intersection of the corresponding row, column, and box candidates
 
-        :return: True if every cell has at least one candidate, False otherwise
+        returns True if every cell has at least one candidate, False otherwise
         """
         for row in range(9):
             self.row_candidates[row] -= set(self.grid[row, :]) - {0}
@@ -147,7 +155,8 @@ class Sudoku(object):
         return True
 
     def assign(self) -> bool:
-        # find a cell with a single candidate, and assign it
+        # fill the first "naked single" we find: a cell with exactly one candidate.
+        # returns True if a cell was filled, False if no forced move exists
         for row in range(9):
             for col in range(9):
                 if len(self.cell_candidates[row][col]) == 1:
@@ -156,6 +165,8 @@ class Sudoku(object):
         return False
 
     def find_cell_with_min_candidates(self) -> tuple[int, int]:
+        # minimum-remaining-values heuristic: pick the empty cell with the fewest
+        # candidates so the guesses in _solve branch as little as possible
         min_candidates = 9
         min_cell = None
         for row in range(9):
